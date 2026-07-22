@@ -1,178 +1,254 @@
 import random
+import time
 
-# -------------------------------
+# ==========================
+# Colors
+# ==========================
+RESET = "\033[0m"
+RED = "\033[91m"
+GREEN = "\033[92m"
+BLUE = "\033[94m"
+YELLOW = "\033[93m"
+CYAN = "\033[96m"
+MAGENTA = "\033[95m"
+
+# ==========================
 # Display Board
-# -------------------------------
+# ==========================
 def display_board(board):
-    print()
-    for i in range(0, 9, 3):
-        print(f" {board[i]} | {board[i+1]} | {board[i+2]}")
-        if i < 6:
-            print("---+---+---")
+
+    print(f"{CYAN}\nCurrent Board\t\tBoard Positions{RESET}")
+
+    for i in range(3):
+        left = f" {board[i*3]} | {board[i*3+1]} | {board[i*3+2]}"
+        right = f" {i*3+1} | {i*3+2} | {i*3+3}"
+        print(left + "\t\t" + right)
+
+        if i != 2:
+            print("---+---+---\t\t---+---+---")
+
     print()
 
 
-# -------------------------------
-# Check Winner
-# -------------------------------
+# ==========================
+# Winner Check
+# ==========================
 def check_winner(board, player):
+
     wins = [
-        [0,1,2], [3,4,5], [6,7,8],
-        [0,3,6], [1,4,7], [2,5,8],
-        [0,4,8], [2,4,6]
+        [0,1,2],
+        [3,4,5],
+        [6,7,8],
+        [0,3,6],
+        [1,4,7],
+        [2,5,8],
+        [0,4,8],
+        [2,4,6]
     ]
 
-    for pattern in wins:
-        if all(board[i] == player for i in pattern):
-            return True
-    return False
+    return any(all(board[i] == player for i in win) for win in wins)
 
 
-# -------------------------------
-# Draw
-# -------------------------------
+# ==========================
+# Draw Check
+# ==========================
 def is_draw(board):
     return " " not in board
 
 
-# -------------------------------
+# ==========================
 # Available Moves
-# -------------------------------
+# ==========================
 def available_moves(board):
     return [i for i in range(9) if board[i] == " "]
 
 
-# -------------------------------
-# AI Move
-# -------------------------------
+# ==========================
+# Smart AI
+# ==========================
 def ai_move(board):
 
-    # Try to win
+    # 1. Win
     for move in available_moves(board):
         temp = board[:]
         temp[move] = "O"
         if check_winner(temp, "O"):
             return move
 
-    # Block player
+    # 2. Block
     for move in available_moves(board):
         temp = board[:]
         temp[move] = "X"
         if check_winner(temp, "X"):
             return move
 
-    # Take center
+    # 3. Center
     if board[4] == " ":
         return 4
 
-    # Take corners
-    corners = [i for i in [0,2,6,8] if board[i] == " "]
-    if corners:
-        return random.choice(corners)
+    # 4. Opposite Corner
+    opposite = {
+        0:8,
+        8:0,
+        2:6,
+        6:2
+    }
 
-    # Random move
+    for corner in opposite:
+        if board[corner] == "X" and board[opposite[corner]] == " ":
+            return opposite[corner]
+
+    # 5. Empty Corner
+    corners = [0,2,6,8]
+    empty = [c for c in corners if board[c] == " "]
+    if empty:
+        return random.choice(empty)
+
+    # 6. Empty Side
+    sides = [1,3,5,7]
+    empty = [s for s in sides if board[s] == " "]
+    if empty:
+        return random.choice(empty)
+
     return random.choice(available_moves(board))
 
 
-# -------------------------------
+# ==========================
 # Player Move
-# -------------------------------
+# ==========================
 def player_move(board):
 
     while True:
+
         try:
-            move = int(input("Enter your move (1-9): ")) - 1
+
+            move = int(input(f"{GREEN}Enter your move (1-9): {RESET}")) - 1
 
             if move not in range(9):
-                print("❌ Choose a number from 1-9.")
+                print(f"{RED}Choose number between 1-9.{RESET}")
+
             elif board[move] != " ":
-                print("❌ Position already occupied.")
+                print(f"{RED}That position is already occupied.{RESET}")
+
             else:
                 return move
 
         except ValueError:
-            print("❌ Please enter a valid number.")
+            print(f"{RED}Invalid input! Enter numbers only.{RESET}")
 
 
-# -------------------------------
+# ==========================
+# Toss
+# ==========================
+def toss():
+
+    print(f"\n{YELLOW}Toss Time!{RESET}")
+
+    while True:
+
+        choice = input("Choose Heads(H) or Tails(T): ").upper()
+
+        if choice in ["H","T"]:
+            break
+
+        print("Enter H or T only.")
+
+    result = random.choice(["H","T"])
+
+    print("Coin:", "Heads" if result=="H" else "Tails")
+
+    return choice == result
+
+
+# ==========================
 # Play Game
-# -------------------------------
+# ==========================
 def play_game():
 
-    board = [" "] * 9
+    board = [" "]*9
 
-    print("\nBoard Positions")
-    print("1 | 2 | 3")
-    print("--+---+--")
-    print("4 | 5 | 6")
-    print("--+---+--")
-    print("7 | 8 | 9")
+    player_turn = toss()
+
+    if player_turn:
+        print(f"{GREEN}\nYou won the toss! You play first.{RESET}")
+    else:
+        print(f"{MAGENTA}\nAI won the toss! AI plays first.{RESET}")
 
     while True:
 
         display_board(board)
 
-        # Player
-        move = player_move(board)
-        board[move] = "X"
+        if player_turn:
 
-        if check_winner(board, "X"):
-            display_board(board)
-            print("🎉 Congratulations! You Win!")
-            return "Player"
+            move = player_move(board)
+            board[move] = "X"
+
+            if check_winner(board,"X"):
+                display_board(board)
+                print(f"{GREEN}🎉 Congratulations! You Win!{RESET}")
+                return "Player"
+
+        else:
+
+            print(f"{MAGENTA}AI is thinking...{RESET}")
+            time.sleep(1)
+
+            move = ai_move(board)
+            board[move] = "O"
+
+            print(f"{BLUE}AI selected position {move+1}{RESET}")
+
+            if check_winner(board,"O"):
+                display_board(board)
+                print(f"{RED}🤖 AI Wins!{RESET}")
+                return "AI"
 
         if is_draw(board):
             display_board(board)
-            print("🤝 Match Draw!")
+            print(f"{YELLOW}🤝 Match Draw!{RESET}")
             return "Draw"
 
-        # AI
-        ai = ai_move(board)
-        board[ai] = "O"
-
-        print(f"🤖 AI chose position {ai + 1}")
-
-        if check_winner(board, "O"):
-            display_board(board)
-            print("🤖 AI Wins!")
-            return "AI"
-
-        if is_draw(board):
-            display_board(board)
-            print("🤝 Match Draw!")
-            return "Draw"
+        player_turn = not player_turn
 
 
-# -------------------------------
-# Main Program
-# -------------------------------
+# ==========================
+# Main
+# ==========================
 player_score = 0
 ai_score = 0
 draw_score = 0
+games = 0
 
-print("=" * 40)
-print("      TIC-TAC-TOE WITH AI")
-print("=" * 40)
+print("="*50)
+print("         TIC TAC TOE WITH SMART AI")
+print("="*50)
 
 while True:
 
     result = play_game()
 
+    games += 1
+
     if result == "Player":
         player_score += 1
+
     elif result == "AI":
         ai_score += 1
+
     else:
         draw_score += 1
 
-    print("\n📊 SCOREBOARD")
-    print("-" * 25)
-    print(f"😊 Player : {player_score}")
-    print(f"🤖 AI     : {ai_score}")
-    print(f"🤝 Draws  : {draw_score}")
+    print(f"\n{CYAN}========== SCOREBOARD =========={RESET}")
 
-    again = input("\nPlay Again? (y/n): ").lower()
+    print(f"Games Played : {games}")
+    print(f"😊 Player Wins : {player_score}")
+    print(f"🤖 AI Wins     : {ai_score}")
+    print(f"🤝 Draws       : {draw_score}")
 
-    if again != "y":
-        print("\n🎮 Thanks for Playing!")
+    print("="*32)
+
+    again = input("\nPlay Again? (Y/N): ").upper()
+
+    if again != "Y":
+        print("\nThanks for playing!")
         break
